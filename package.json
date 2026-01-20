@@ -18,7 +18,8 @@
     "react-dom": "19.2.3",
     "react-india-states-map": "^1.0.0",
     "react-simple-maps": "^3.0.0",
-    "react-svg-map": "^2.2.0"
+    "react-svg-map": "^2.2.0",
+    "vercel": "^50.4.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
