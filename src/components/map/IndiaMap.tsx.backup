@@ -1,0 +1,253 @@
+'use client'
+
+import type { State } from './types'
+import { useState } from 'react'
+
+// More accurate SVG paths for Indian states with better proportions
+const STATE_PATHS: Record<string, string> = {
+  JK: 'M130,35 L160,25 L185,30 L195,50 L185,75 L165,90 L145,85 L130,70 Z',
+  HP: 'M165,90 L195,80 L215,95 L210,120 L185,125 L165,115 Z',
+  PB: 'M145,85 L165,80 L180,100 L170,125 L145,120 Z',
+  UK: 'M215,95 L240,85 L255,105 L245,130 L220,125 Z',
+  HR: 'M170,125 L195,120 L210,145 L190,165 L165,160 Z',
+  DL: 'M190,160 L205,155 L210,170 L195,175 Z',
+  RJ: 'M90,135 L170,125 L180,220 L130,260 L75,230 L70,170 Z',
+  UP: 'M210,135 L305,125 L320,220 L260,250 L200,235 L190,165 Z',
+  BR: 'M320,200 L385,190 L400,245 L355,275 L315,260 Z',
+  SK: 'M395,170 L420,165 L430,190 L415,210 L390,205 Z',
+  AR: 'M495,145 L535,135 L550,180 L530,215 L490,205 Z',
+  NL: 'M500,215 L535,205 L545,240 L520,260 L495,250 Z',
+  MN: 'M510,260 L540,250 L550,295 L525,315 L500,305 Z',
+  MZ: 'M500,315 L530,305 L540,360 L515,385 L490,370 Z',
+  TR: 'M475,325 L505,315 L515,360 L490,380 L465,365 Z',
+  ML: 'M450,235 L495,220 L505,275 L465,300 L440,285 Z',
+  AS: 'M420,190 L495,175 L510,245 L450,270 L410,250 Z',
+  WB: 'M400,250 L445,235 L460,340 L420,375 L380,360 L370,285 Z',
+  JH: 'M355,265 L400,250 L410,325 L370,355 L335,340 Z',
+  OD: 'M355,340 L415,325 L435,420 L380,455 L330,430 Z',
+  CG: 'M305,315 L360,300 L380,415 L330,450 L280,420 Z',
+  MP: 'M200,235 L305,220 L320,325 L225,355 L175,315 Z',
+  GJ: 'M65,235 L130,225 L145,325 L100,375 L45,340 L35,280 Z',
+  MH: 'M100,360 L225,340 L255,475 L145,510 L75,465 Z',
+  TS: 'M225,415 L300,395 L325,490 L255,535 L210,510 Z',
+  AP: 'M240,490 L330,465 L370,595 L285,640 L225,600 Z',
+  KA: 'M105,485 L210,465 L240,610 L155,665 L85,610 Z',
+  GA: 'M85,515 L115,505 L125,560 L95,580 Z',
+  KL: 'M115,620 L155,600 L180,710 L140,750 L110,715 Z',
+  TN: 'M180,600 L280,570 L310,695 L225,755 L165,720 Z',
+  AN: 'M445,575 L475,565 L485,695 L455,715 L430,690 Z',
+  LD: 'M35,625 L70,615 L80,665 L45,685 Z',
+}
+
+// State name mappings for display
+const STATE_NAMES: Record<string, string> = {
+  JK: 'Jammu & Kashmir',
+  HP: 'Himachal Pradesh',
+  PB: 'Punjab',
+  UK: 'Uttarakhand',
+  HR: 'Haryana',
+  DL: 'Delhi',
+  RJ: 'Rajasthan',
+  UP: 'Uttar Pradesh',
+  BR: 'Bihar',
+  SK: 'Sikkim',
+  AR: 'Arunachal Pradesh',
+  NL: 'Nagaland',
+  MN: 'Manipur',
+  MZ: 'Mizoram',
+  TR: 'Tripura',
+  ML: 'Meghalaya',
+  AS: 'Assam',
+  WB: 'West Bengal',
+  JH: 'Jharkhand',
+  OD: 'Odisha',
+  CG: 'Chhattisgarh',
+  MP: 'Madhya Pradesh',
+  GJ: 'Gujarat',
+  MH: 'Maharashtra',
+  TS: 'Telangana',
+  AP: 'Andhra Pradesh',
+  KA: 'Karnataka',
+  GA: 'Goa',
+  KL: 'Kerala',
+  TN: 'Tamil Nadu',
+  AN: 'Andaman & Nicobar',
+  LD: 'Lakshadweep',
+}
+
+interface IndiaMapProps {
+  states: State[]
+  hoveredStateId: string | null
+  onStateHover: (id: string | null) => void
+  onStateClick: (id: string) => void
+}
+
+export function IndiaMap({
+  states,
+  hoveredStateId,
+  onStateHover,
+  onStateClick,
+}: IndiaMapProps) {
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
+
+  const getStateColor = (state: State | undefined) => {
+    if (!state) return '#ea580c'
+    const intensity = Math.min(state.enrolments / 20000000, 1)
+
+    if (state.healthIndicator === 'high') {
+      return `rgba(239, 68, 68, ${0.5 + intensity * 0.5})`
+    } else if (state.healthIndicator === 'medium') {
+      return `rgba(249, 115, 22, ${0.5 + intensity * 0.5})`
+    } else {
+      return `rgba(34, 197, 94, ${0.5 + intensity * 0.5})`
+    }
+  }
+
+  const hoveredState = states.find(s => s.id === hoveredStateId || s.code === hoveredStateId)
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setTooltipPos({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top - 60,
+    })
+  }
+
+  return (
+    <div className="relative h-full w-full" onMouseMove={handleMouseMove}>
+      <svg
+        viewBox="0 0 550 850"
+        className="h-full w-full"
+        style={{ maxHeight: '100%' }}
+      >
+        <defs>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <linearGradient id="mapGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#292524" />
+            <stop offset="100%" stopColor="#1c1917" />
+          </linearGradient>
+        </defs>
+
+        {/* Background */}
+        <rect x="0" y="0" width="550" height="850" fill="url(#mapGradient)" rx="8" />
+
+        {/* State paths */}
+        {Object.entries(STATE_PATHS).map(([code, path]) => {
+          const state = states.find(s => s.id === code || s.code === code)
+          const isHovered = hoveredStateId === code || hoveredState?.code === code
+
+          return (
+            <g key={code}>
+              <path
+                d={path}
+                fill={getStateColor(state)}
+                stroke={isHovered ? '#fff' : 'rgba(255,255,255,0.3)'}
+                strokeWidth={isHovered ? 2 : 0.5}
+                className="cursor-pointer transition-all duration-200"
+                style={{
+                  filter: isHovered ? 'url(#glow)' : 'none',
+                  transform: isHovered ? 'scale(1.02)' : 'scale(1)',
+                  transformOrigin: 'center',
+                }}
+                onMouseEnter={() => onStateHover(code)}
+                onMouseLeave={() => onStateHover(null)}
+                onClick={() => onStateClick(code)}
+              />
+              {/* State code label */}
+              <text
+                x={getStateCentroid(path).x}
+                y={getStateCentroid(path).y}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                className="pointer-events-none select-none fill-white text-[8px] font-medium opacity-70"
+              >
+                {code}
+              </text>
+            </g>
+          )
+        })}
+      </svg>
+
+      {/* Tooltip */}
+      {hoveredState && (
+        <div
+          className="pointer-events-none absolute z-50 rounded-lg border border-stone-600 bg-stone-800/95 px-4 py-3 shadow-xl backdrop-blur-sm"
+          style={{
+            left: Math.min(tooltipPos.x, window.innerWidth - 200),
+            top: Math.max(tooltipPos.y, 10),
+          }}
+        >
+          <p className="font-semibold text-white">{hoveredState.name}</p>
+          <div className="mt-2 space-y-1">
+            <p className="text-sm text-orange-300">
+              <span className="font-mono">{(hoveredState.enrolments / 1000000).toFixed(2)}M</span> enrolments
+            </p>
+            <p className="text-sm text-emerald-300">
+              <span className="font-mono">{(hoveredState.demographicUpdates / 1000000).toFixed(2)}M</span> demographic
+            </p>
+            <p className="text-sm text-purple-300">
+              <span className="font-mono">{(hoveredState.biometricUpdates / 1000000).toFixed(2)}M</span> biometric
+            </p>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <span
+              className={`h-2 w-2 rounded-full ${
+                hoveredState.healthIndicator === 'high'
+                  ? 'bg-red-500'
+                  : hoveredState.healthIndicator === 'medium'
+                  ? 'bg-orange-500'
+                  : 'bg-emerald-500'
+              }`}
+            />
+            <span className="text-xs capitalize text-stone-400">
+              {hoveredState.healthIndicator} stress
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Legend */}
+      <div className="absolute bottom-4 left-4 rounded-lg border border-stone-600 bg-stone-800/90 px-4 py-3 backdrop-blur-sm">
+        <p className="mb-3 text-xs font-medium text-white/80">System Stress Level</p>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <div className="h-3 w-3 rounded-sm bg-emerald-500" />
+            <span className="text-xs text-white/70">Low</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-3 w-3 rounded-sm bg-orange-500" />
+            <span className="text-xs text-white/70">Medium</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-3 w-3 rounded-sm bg-red-500" />
+            <span className="text-xs text-white/70">High</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Helper function to get approximate centroid of a path
+function getStateCentroid(path: string): { x: number; y: number } {
+  const coords = path.match(/[\d.]+/g)?.map(Number) || []
+  if (coords.length < 4) return { x: 0, y: 0 }
+
+  let sumX = 0
+  let sumY = 0
+  let count = 0
+
+  for (let i = 0; i < coords.length - 1; i += 2) {
+    sumX += coords[i]
+    sumY += coords[i + 1]
+    count++
+  }
+
+  return { x: sumX / count, y: sumY / count }
+}
