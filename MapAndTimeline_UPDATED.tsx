@@ -1,9 +1,9 @@
 'use client'
 
-import type { MapAndTimelineProps, State } from './types'
+import type { MapAndTimelineProps, State, TimePeriod } from './src/components/map/types'
 import { Play, Pause, TrendingUp, TrendingDown, Users, FileText, Fingerprint, Info } from 'lucide-react'
 import { useState } from 'react'
-import { IndiaMap } from './IndiaMap'
+import { IndiaMap } from './src/components/map/IndiaMap'
 
 // Card explanations for hover tooltips - focused on WHY these metrics matter
 const CARD_EXPLANATIONS = {
@@ -228,7 +228,7 @@ export function MapAndTimeline({
   const [isPlaying, setIsPlaying] = useState(false)
   const [hoveredStateId, setHoveredStateId] = useState<string | null>(null)
 
-  const selectedIndex = timePeriods.findIndex((p) => p.id === selectedPeriodId) || 0
+  const selectedIndex = timePeriods.findIndex((p: TimePeriod) => p.id === selectedPeriodId) || 0
 
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying)
@@ -255,7 +255,7 @@ export function MapAndTimeline({
           states={states}
           hoveredStateId={hoveredStateId}
           onStateHover={handleStateHover}
-          onStateClick={(id) => onStateClick?.(id)}
+          onStateClick={(id: string) => onStateClick?.(id)}
         />
       </div>
 
